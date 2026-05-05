@@ -222,16 +222,22 @@ def tag_post_list(request, tag_id):
 @permission_classes([IsAuthenticated])
 def search_posts(request):
     query = request.query_params.get('q', '').strip()
-    if not query:
+    author = request.query_params.get('author', '').strip()
+
+    if not query and not author:
         return Response([])
 
     posts = (
         Post.objects
         .select_related('user', 'category')
-        .filter(title__icontains=query, approved=True, publication_date__lte=timezone.now().date())
-        .order_by('-publication_date')
+        .filter(approved=True, publication_date__lte=timezone.now().date())
     )
-    return Response(PostListSerializer(posts, many=True).data)
+    if query:
+        posts = posts.filter(title__icontains=query)
+    if author:
+        posts = posts.filter(user__username__icontains=author)
+
+    return Response(PostListSerializer(posts.order_by('-publication_date'), many=True).data)
 
 
 @api_view(['PUT'])
