@@ -1,5 +1,6 @@
 import os
 from django.conf import settings
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -37,7 +38,10 @@ def post_list(request):
     posts = (
         Post.objects
         .select_related('user', 'category')
-        .filter(approved=True, publication_date__lte=timezone.now().date())
+        .filter(
+            Q(approved=True, publication_date__lte=timezone.now().date()) |
+            Q(approved=False, user=request.user)
+        )
         .order_by('-publication_date')
     )
     return Response(PostListSerializer(posts, many=True).data)
